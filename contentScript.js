@@ -1,4 +1,4 @@
-const overlayClass = 'product-image-overlay';
+const overlayClass = '[class^="image-section_component_image-section__image"]';
 let enabled = false;
 let opacity = 0.5;
 let imageCount = 0;
@@ -16,7 +16,7 @@ const applyOverlay = (img) => {
   const container = img.parentElement;
   if (!container) return;
 
-  const existing = container.querySelector(`.${overlayClass}`);
+  const existing = container.querySelector(`${overlayClass}`);
   if (existing) {
     existing.style.opacity = opacity;
     return;
@@ -40,7 +40,7 @@ const applyToAll = () => {
 };
 
 const removeAll = () => {
-  document.querySelectorAll(`.${overlayClass}`).forEach((overlay) => {
+  document.querySelectorAll(`${overlayClass}`).forEach((overlay) => {
     const container = overlay.parentElement;
     overlay.remove();
     if (container && container.dataset.originalPosition === 'static') {
@@ -90,7 +90,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'OPACITY') {
     opacity = message.opacity;
     if (enabled) {
-      document.querySelectorAll(`.${overlayClass}`).forEach((overlay) => {
+      document.querySelectorAll(`${overlayClass}`).forEach((overlay) => {
         overlay.style.opacity = opacity;
       });
     }
