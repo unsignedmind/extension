@@ -1,5 +1,7 @@
 const overlayClass = 'product-image-overlay';
 const tileSelector = '[class^="product-list_component_product-list__tile"]';
+const imageSelector = '[class^="image-section_component_image-section__image"]';
+const selectors = [tileSelector, imageSelector];
 let enabled = false;
 let opacity = 0.5;
 let imageCount = 0;
@@ -42,7 +44,9 @@ const applyOverlay = (tile) => {
 };
 
 const applyToAll = () => {
-  document.querySelectorAll(tileSelector).forEach(applyOverlay);
+  selectors.forEach((selector) => {
+    document.querySelectorAll(selector).forEach(applyOverlay);
+  });
   updateCount();
 };
 
@@ -63,10 +67,12 @@ const observer = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
     mutation.addedNodes.forEach((node) => {
       if (node.nodeType !== 1) return;
-      if (node.matches?.(tileSelector)) {
-        applyOverlay(node);
-      }
-      node.querySelectorAll?.(tileSelector).forEach(applyOverlay);
+      selectors.forEach((selector) => {
+        if (node.matches?.(selector)) {
+          applyOverlay(node);
+        }
+        node.querySelectorAll?.(selector).forEach(applyOverlay);
+      });
     });
   });
 });
