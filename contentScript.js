@@ -1,22 +1,23 @@
-const overlayClass = '[class^="image-section_component_image-section__image"]';
+const overlayClass = 'product-image-overlay';
+const tileSelector = '[class^="product-list_component_product-list__tile"]';
 let enabled = false;
 let opacity = 0.5;
 let imageCount = 0;
 
 const updateCount = () => {
-  const imgs = document.querySelectorAll('img');
-  const newCount = imgs.length;
+  const tiles = document.querySelectorAll(tileSelector);
+  const newCount = tiles.length;
   if (newCount !== imageCount) {
     imageCount = newCount;
     chrome.runtime.sendMessage({ type: 'COUNT_UPDATE', count: imageCount });
   }
 };
 
-const applyOverlay = (img) => {
-  const container = img.parentElement;
+const applyOverlay = (tile) => {
+  const container = tile;
   if (!container) return;
 
-  const existing = container.querySelector(`${overlayClass}`);
+  const existing = container.querySelector(`.${overlayClass}`);
   if (existing) {
     existing.style.opacity = opacity;
     return;
@@ -31,16 +32,22 @@ const applyOverlay = (img) => {
   const overlay = document.createElement('div');
   overlay.className = overlayClass;
   overlay.style.opacity = opacity;
-  container.appendChild(overlay);
+
+  const imgContainer = container.querySelector('img')?.parentElement;
+  if (imgContainer) {
+    imgContainer.insertAdjacentElement('afterend', overlay);
+  } else {
+    container.appendChild(overlay);
+  }
 };
 
 const applyToAll = () => {
-  document.querySelectorAll('img').forEach(applyOverlay);
+  document.querySelectorAll(tileSelector).forEach(applyOverlay);
   updateCount();
 };
 
 const removeAll = () => {
-  document.querySelectorAll(`${overlayClass}`).forEach((overlay) => {
+  document.querySelectorAll(`.${overlayClass}`).forEach((overlay) => {
     const container = overlay.parentElement;
     overlay.remove();
     if (container && container.dataset.originalPosition === 'static') {
@@ -56,10 +63,10 @@ const observer = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
     mutation.addedNodes.forEach((node) => {
       if (node.nodeType !== 1) return;
-      if (node.tagName === 'IMG') {
+      if (node.matches?.(tileSelector)) {
         applyOverlay(node);
       }
-      node.querySelectorAll?.('img').forEach(applyOverlay);
+      node.querySelectorAll?.(tileSelector).forEach(applyOverlay);
     });
   });
 });
@@ -90,7 +97,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'OPACITY') {
     opacity = message.opacity;
     if (enabled) {
-      document.querySelectorAll(`${overlayClass}`).forEach((overlay) => {
+      document.querySelectorAll(`.${overlayClass}`).forEach((overlay) => {
         overlay.style.opacity = opacity;
       });
     }
