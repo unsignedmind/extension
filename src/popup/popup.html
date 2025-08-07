@@ -11,7 +11,13 @@
     </label>
     <div id="count">Images found: 0</div>
     <label>
-      Opacity: <input type="range" id="opacity" min="0" max="0.25" step="0.01" />
+      Opacity(<span id="opacityValue"></span>):
+    </label>
+    <input type="range" id="opacity" min="0" max="0.25" step="0.01" />
+    <label>
+      Pick Color:
+      <input type="color" id="colorPicker" />
+      <span id="colorValue">rgb(0,0,0)</span>
     </label>
     <script src="popup.js"></script>
   </body>
