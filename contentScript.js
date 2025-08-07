@@ -1,89 +1,24 @@
 const overlayClass = 'product-image-overlay';
-const tileSelector = '[class^="product-list_component_product-list__tile"]';
-const imageSelector = '[class^="image-section_component_image-section__image"]';
-const selectors = [tileSelector, imageSelector];
+const tileSelector = '[class^="product-list_component_product-list__tile__"]';
+const imageContainerSelector = '[class^="image-section_component_image-section__"]';
 let enabled = false;
-let opacity = 0.5;
+let currentOpacity = 0.03;
 let imageCount = 0;
 
 const updateCount = () => {
-  const tiles = document.querySelectorAll(tileSelector);
-  const newCount = tiles.length;
+  const images = document.querySelectorAll(imageContainerSelector);
+  const newCount = images.length;
   if (newCount !== imageCount) {
     imageCount = newCount;
     chrome.runtime.sendMessage({ type: 'COUNT_UPDATE', count: imageCount });
   }
 };
 
-const applyOverlay = (tile) => {
-  const container = tile;
-  if (!container) return;
-
-  const existing = container.querySelector(`.${overlayClass}`);
-  if (existing) {
-    existing.style.opacity = opacity;
-    return;
-  }
-
-  const computed = window.getComputedStyle(container);
-  if (computed.position === 'static') {
-    container.dataset.originalPosition = 'static';
-    container.style.position = 'relative';
-  }
-
-  const overlay = document.createElement('div');
-  overlay.className = overlayClass;
-  overlay.style.opacity = opacity;
-
-  const imgContainer = container.querySelector('img')?.parentElement;
-  if (imgContainer) {
-    imgContainer.insertAdjacentElement('afterend', overlay);
-  } else {
-    container.appendChild(overlay);
-  }
-};
-
-const applyToAll = () => {
-  selectors.forEach((selector) => {
-    document.querySelectorAll(selector).forEach(applyOverlay);
-  });
-  updateCount();
-};
-
-const removeAll = () => {
-  document.querySelectorAll(`.${overlayClass}`).forEach((overlay) => {
-    const container = overlay.parentElement;
-    overlay.remove();
-    if (container && container.dataset.originalPosition === 'static') {
-      container.style.position = '';
-      delete container.dataset.originalPosition;
-    }
-  });
-};
-
-const observer = new MutationObserver((mutations) => {
-  updateCount();
-  if (!enabled) return;
-  mutations.forEach((mutation) => {
-    mutation.addedNodes.forEach((node) => {
-      if (node.nodeType !== 1) return;
-      selectors.forEach((selector) => {
-        if (node.matches?.(selector)) {
-          applyOverlay(node);
-        }
-        node.querySelectorAll?.(selector).forEach(applyOverlay);
-      });
-    });
-  });
-});
-
-observer.observe(document.documentElement, { childList: true, subtree: true });
-
 chrome.storage.local.get(['enabled', 'opacity'], (res) => {
   enabled = res.enabled;
-  opacity = res.opacity ?? opacity;
+  currentOpacity = res.opacity ?? currentOpacity;
   if (enabled) {
-    applyToAll();
+    enableOverlay(currentOpacity);
   } else {
     updateCount();
   }
@@ -93,19 +28,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'ENABLE') {
     enabled = message.enabled;
     if (enabled) {
-      applyToAll();
+      enableOverlay()
     } else {
-      removeAll();
+      disableOverlay()
     }
     updateCount();
   }
 
   if (message.type === 'OPACITY') {
-    opacity = message.opacity;
+    currentOpacity = message.opacity;
     if (enabled) {
-      document.querySelectorAll(`.${overlayClass}`).forEach((overlay) => {
-        overlay.style.opacity = opacity;
-      });
+      enableOverlay(currentOpacity);
     }
   }
 
@@ -113,3 +46,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ count: imageCount });
   }
 });
+
+// 1. Create and inject the rule
+function enableOverlay(opacity = opacity) {
+  disableOverlay();
+  if (document.getElementById('product-list-overlay-style')) return;
+  const style = document.createElement('style');
+  style.id = 'product-list-overlay-style';
+  style.textContent = `
+    [class^="product-list_component_product-list__tile__"]::after {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      background: rgba(0, 0, 0, ${opacity});
+      border-radius: 1rem;
+      z-index: 1;
+      pointer-events: none;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// 2. Remove the rule
+function disableOverlay() {
+  const style = document.getElementById('product-list-overlay-style');
+  if (style) style.remove();
+}
+

@@ -9,7 +9,7 @@ const updateCount = (count) => {
 chrome.storage.local.get(['enabled', 'opacity'], (res) => {
   const enabled = res.enabled;
   toggle.checked = enabled;
-  opacitySlider.value = res.opacity ?? 0.5;
+  opacitySlider.value = res.opacity ?? 0.0;
   opacitySlider.disabled = !enabled;
 
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
